@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CS Quiz Master</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a26;
+    --border: #2a2a3e;
+    --accent: #6c63ff;
+    --accent2: #ff6b9d;
+    --accent3: #00d4aa;
+    --text: #e8e8f0;
+    --text-muted: #888899;
+    --correct: #00d4aa;
+    --wrong: #ff4d6d;
+    --card-glow: rgba(108,99,255,0.15);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: 'Outfit', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated background */
+  body::before {
+    content:'';
+    position:fixed; inset:0; z-index:0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(108,99,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 50% at 80% 90%, rgba(255,107,157,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(0,212,170,0.06) 0%, transparent 60%);
+    animation: bgPulse 8s ease-in-out infinite alternate;
+    pointer-events:none;
+  }
+  @keyframes bgPulse {
+    0% { opacity:1; transform:scale(1); }
+    100% { opacity:0.7; transform:scale(1.05); }
+  }
+
+  /* Grid overlay */
+  body::after {
+    content:'';
+    position:fixed; inset:0; z-index:0;
+    background-image:
+      linear-gradient(rgba(108,99,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(108,99,255,0.04) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events:none;
+  }
+
+  .wrapper { position:relative; z-index:1; }
+
+  /* ===== SCREENS ===== */
+  .screen { display:none; min-height:100vh; }
+  .screen.active { display:flex; flex-direction:column; }
+
+  /* ===== WELCOME ===== */
+  #welcome {
+    align-items:center;
+    justify-content:center;
+    padding: 40px 20px;
+    text-align:center;
+  }
+
+  .logo-badge {
+    display:inline-flex; align-items:center; gap:10px;
+    background: linear-gradient(135deg, rgba(108,99,255,0.2), rgba(255,107,157,0.15));
+    border: 1px solid rgba(108,99,255,0.4);
+    border-radius:50px;
+    padding: 8px 20px;
+    font-size:13px; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+    color: var(--accent);
+    margin-bottom:32px;
+    animation: fadeSlideDown 0.6s ease both;
+  }
+  .logo-badge .dot { width:8px;height:8px;border-radius:50%;background:var(--accent);animation:blink 1.5s infinite; }
+  @keyframes blink { 0%,100%{opacity:1}50%{opacity:0.3} }
+
+  h1.main-title {
+    font-size: clamp(42px, 8vw, 88px);
+    font-weight: 900;
+    line-height:1;
+    letter-spacing:-3px;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 50%, var(--accent2) 100%);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    margin-bottom:16px;
+    animation: fadeSlideDown 0.7s ease 0.1s both;
+  }
+
+  .subtitle {
+    font-size:18px; color:var(--text-muted); font-weight:400;
+    max-width:480px; margin: 0 auto 48px;
+    animation: fadeSlideDown 0.7s ease 0.2s both;
+    line-height:1.6;
+  }
+
+  /* Chapter cards */
+  .chapter-grid {
+    display:flex; gap:16px; flex-wrap:wrap; justify-content:center;
+    max-width:900px; margin: 0 auto 40px;
+    animation: fadeSlideDown 0.7s ease 0.3s both;
+  }
+
+  .chapter-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius:20px;
+    padding: 24px 28px;
+    flex:1; min-width:220px; max-width:280px;
+    cursor:pointer;
+    transition: all 0.3s ease;
+    position:relative; overflow:hidden;
+    text-align:left;
+  }
+  .chapter-card::before {
+    content:''; position:absolute; inset:0;
+    background: linear-gradient(135deg, var(--glow-color, rgba(108,99,255,0.1)), transparent);
+    opacity:0; transition:opacity 0.3s;
+  }
+  .chapter-card:hover::before { opacity:1; }
+  .chapter-card:hover { transform:translateY(-4px); border-color: var(--glow-border, var(--accent)); box-shadow: 0 20px 40px rgba(0,0,0,0.3), 0 0 0 1px var(--glow-border, var(--accent)); }
+  .chapter-card.selected { border-color: var(--glow-border, var(--accent)); background: rgba(108,99,255,0.1); }
+
+  .chapter-card[data-ch="1"] { --glow-color: rgba(108,99,255,0.15); --glow-border: var(--accent); }
+  .chapter-card[data-ch="2"] { --glow-color: rgba(255,107,157,0.15); --glow-border: var(--accent2); }
+  .chapter-card[data-ch="3"] { --glow-color: rgba(0,212,170,0.15); --glow-border: var(--accent3); }
+  .chapter-card[data-ch="all"] { --glow-color: rgba(255,200,100,0.15); --glow-border: #ffc86b; }
+
+  .card-icon { font-size:32px; margin-bottom:12px; }
+  .card-title { font-size:16px; font-weight:700; margin-bottom:6px; }
+  .card-desc { font-size:13px; color:var(--text-muted); line-height:1.5; }
+  .card-count {
+    display:inline-block; margin-top:12px;
+    background:rgba(255,255,255,0.08); border-radius:20px;
+    padding:3px 10px; font-size:12px; font-weight:600; color:var(--text-muted);
+    font-family:'Space Mono', monospace;
+  }
+
+  .start-btn {
+    display:inline-flex; align-items:center; gap:12px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color:#fff; border:none; border-radius:50px;
+    padding: 18px 44px; font-size:17px; font-weight:700;
+    cursor:pointer; font-family:'Outfit', sans-serif;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 32px rgba(108,99,255,0.4);
+    animation: fadeSlideDown 0.7s ease 0.4s both;
+    letter-spacing:0.5px;
+  }
+  .start-btn:hover { transform:translateY(-2px) scale(1.02); box-shadow: 0 12px 40px rgba(108,99,255,0.5); }
+  .start-btn:active { transform:scale(0.98); }
+  .start-btn .arrow { font-size:20px; transition:transform 0.3s; }
+  .start-btn:hover .arrow { transform:translateX(4px); }
+
+  /* Best score display */
+  .best-score-display {
+    margin-top:24px;
+    padding:16px 28px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:16px;
+    font-size:14px; color:var(--text-muted);
+    animation: fadeSlideDown 0.7s ease 0.5s both;
+  }
+  .best-score-display strong { color:var(--accent3); font-size:18px; }
+
+  @keyframes fadeSlideDown {
+    from { opacity:0; transform:translateY(-20px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* ===== QUIZ SCREEN ===== */
+  #quiz {
+    flex-direction:column;
+    padding: 0;
+  }
+
+  /* Top bar */
+  .quiz-topbar {
+    position:sticky; top:0; z-index:100;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter:blur(20px);
+    border-bottom:1px solid var(--border);
+    padding: 16px 32px;
+    display:flex; align-items:center; gap:16px;
+  }
+
+  .frosted-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--text);
+    opacity: 0.75;
+    user-select: none;
+    flex-shrink: 0;
+  }
+
+  .quit-btn {
+    background:none; border:1px solid var(--border);
+    color:var(--text-muted); border-radius:10px;
+    padding:8px 16px; cursor:pointer; font-family:'Outfit',sans-serif;
+    font-size:13px; transition:all 0.2s;
+  }
+  .quit-btn:hover { border-color:var(--wrong); color:var(--wrong); }
+
+  .quiz-info {
+    flex:1; display:flex; align-items:center; gap:16px;
+    font-size:13px; color:var(--text-muted);
+    font-family:'Space Mono', monospace;
+  }
+
+  .topic-tag {
+    padding:4px 12px; border-radius:20px;
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  }
+
+  .score-live {
+    display:flex; align-items:center; gap:8px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:50px; padding:6px 16px;
+    font-size:13px; font-family:'Space Mono',monospace;
+  }
+  .score-live .s-correct { color:var(--correct); font-weight:700; }
+  .score-live .s-wrong { color:var(--wrong); font-weight:700; }
+
+  /* Progress bar */
+  .progress-bar-wrap {
+    height:3px; background:var(--surface2);
+    position:relative;
+  }
+  .progress-bar-fill {
+    height:100%; background:linear-gradient(90deg, var(--accent), var(--accent2));
+    transition:width 0.5s cubic-bezier(0.4,0,0.2,1);
+    border-radius:0 3px 3px 0;
+  }
+
+  /* Question area */
+  .quiz-main {
+    flex:1;
+    display:flex; flex-direction:column;
+    align-items:center;
+    padding:60px 20px;
+    max-width:800px; margin:0 auto; width:100%;
+  }
+
+  .q-header {
+    display:flex; align-items:center; gap:12px;
+    margin-bottom:32px; align-self:flex-start;
+  }
+  .q-number {
+    font-family:'Space Mono',monospace;
+    font-size:13px; color:var(--text-muted);
+  }
+  .q-topic-badge {
+    padding:4px 12px; border-radius:20px;
+    font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:1px;
+  }
+
+  .question-card {
+    width:100%;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:24px;
+    padding:40px;
+    margin-bottom:28px;
+    animation:cardIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both;
+  }
+  @keyframes cardIn {
+    from { opacity:0; transform:translateY(30px) scale(0.97); }
+    to { opacity:1; transform:translateY(0) scale(1); }
+  }
+
+  .question-text {
+    font-size:20px; font-weight:600; line-height:1.55;
+    margin-bottom:8px;
+  }
+
+  /* Code blocks in questions */
+  .question-text code, .option-text code {
+    font-family:'Space Mono',monospace;
+    background:rgba(108,99,255,0.15);
+    border:1px solid rgba(108,99,255,0.2);
+    border-radius:6px;
+    padding:2px 6px;
+    font-size:0.9em;
+    color:#b8b0ff;
+  }
+
+  pre.code-block {
+    background:rgba(0,0,0,0.4);
+    border:1px solid var(--border);
+    border-left:3px solid var(--accent);
+    border-radius:12px;
+    padding:20px 24px;
+    margin: 20px 0;
+    font-family:'Space Mono',monospace;
+    font-size:13px;
+    line-height:1.7;
+    overflow-x:auto;
+    color:#d4d0ff;
+    white-space:pre;
+  }
+
+  /* Options */
+  .options { display:flex; flex-direction:column; gap:12px; width:100%; }
+
+  .option-btn {
+    background:var(--surface2);
+    border:1.5px solid var(--border);
+    border-radius:16px;
+    padding:18px 24px;
+    display:flex; align-items:center; gap:16px;
+    cursor:pointer;
+    transition:all 0.25s ease;
+    text-align:left; width:100%;
+    font-family:'Outfit',sans-serif;
+    color: var(--text);
+    animation:optIn 0.4s ease both;
+  }
+  .option-btn:nth-child(1){animation-delay:0.05s}
+  .option-btn:nth-child(2){animation-delay:0.1s}
+  .option-btn:nth-child(3){animation-delay:0.15s}
+  .option-btn:nth-child(4){animation-delay:0.2s}
+  @keyframes optIn {
+    from{opacity:0;transform:translateX(-15px)}
+    to{opacity:1;transform:translateX(0)}
+  }
+
+  .option-btn:hover:not(:disabled) {
+    border-color:var(--accent);
+    background:rgba(108,99,255,0.08);
+    transform:translateX(4px);
+  }
+  .option-btn:disabled { cursor:default; }
+
+  .option-letter {
+    width:34px; height:34px; border-radius:10px;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.1);
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:13px; flex-shrink:0;
+    font-family:'Space Mono',monospace;
+    color: var(--text);
+    transition:all 0.25s;
+  }
+
+  .option-text { font-size:15px; font-weight:500; line-height:1.45; flex:1; color: var(--text); }
+
+  .option-btn.correct {
+    border-color:var(--correct);
+    background:rgba(0,212,170,0.08);
+  }
+  .option-btn.correct .option-letter {
+    background:var(--correct); color:#000; border-color:var(--correct);
+  }
+
+  .option-btn.wrong {
+    border-color:var(--wrong);
+    background:rgba(255,77,109,0.08);
+  }
+  .option-btn.wrong .option-letter {
+    background:var(--wrong); color:#fff; border-color:var(--wrong);
+  }
+
+  /* Hint */
+  .hint-box {
+    width:100%;
+    background:rgba(108,99,255,0.06);
+    border:1px solid rgba(108,99,255,0.2);
+    border-left:3px solid var(--accent);
+    border-radius:16px;
+    padding:20px 24px;
+    margin-top:8px;
+    display:none;
+    animation:hintIn 0.35s ease;
+  }
+  @keyframes hintIn { from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+  .hint-box.show { display:flex; gap:12px; align-items:flex-start; }
+  .hint-icon { font-size:20px; flex-shrink:0; }
+  .hint-title { font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; color:var(--accent); margin-bottom:4px; }
+  .hint-text { font-size:14px; color:var(--text-muted); line-height:1.6; }
+
+  /* Result overlay for each Q */
+  .result-badge {
+    display:none; align-items:center; gap:8px;
+    padding:10px 20px; border-radius:30px;
+    font-weight:700; font-size:15px;
+    margin-bottom:16px; align-self:flex-start;
+  }
+  .result-badge.correct { display:flex; background:rgba(0,212,170,0.15); color:var(--correct); border:1px solid rgba(0,212,170,0.3); }
+  .result-badge.wrong { display:flex; background:rgba(255,77,109,0.15); color:var(--wrong); border:1px solid rgba(255,77,109,0.3); }
+
+  .next-btn {
+    align-self:flex-end;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:#fff; border:none; border-radius:14px;
+    padding:14px 32px; font-size:15px; font-weight:700;
+    cursor:pointer; font-family:'Outfit',sans-serif;
+    transition:all 0.25s; display:none;
+    animation:fadeSlideDown 0.3s ease;
+    letter-spacing:0.5px;
+  }
+  .next-btn.show { display:block; }
+  .next-btn:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(108,99,255,0.4); }
+
+  /* ===== RESULTS SCREEN ===== */
+  #results {
+    align-items:center; justify-content:center;
+    padding:60px 20px; text-align:center;
+  }
+
+  .results-card {
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:32px;
+    padding:60px 48px;
+    max-width:700px; width:100%;
+    position:relative; overflow:hidden;
+    animation:cardIn 0.5s ease;
+  }
+  .results-card::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse 80% 60% at 50% 0%, rgba(108,99,255,0.1), transparent);
+    pointer-events:none;
+  }
+
+  .score-ring {
+    width:160px; height:160px;
+    margin:0 auto 32px;
+    position:relative;
+  }
+  .score-ring svg { transform:rotate(-90deg); }
+  .score-ring .ring-bg { fill:none; stroke:var(--surface2); stroke-width:10; }
+  .score-ring .ring-fill {
+    fill:none; stroke-width:10;
+    stroke-linecap:round;
+    stroke-dasharray:408;
+    stroke-dashoffset:408;
+    transition:stroke-dashoffset 1.5s cubic-bezier(0.4,0,0.2,1) 0.3s;
+    stroke:url(#ringGrad);
+  }
+  .score-pct {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-weight:900; font-size:36px;
+    background:linear-gradient(135deg,#fff,var(--accent));
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  .score-pct span { font-size:14px; font-weight:500; color:var(--text-muted); -webkit-text-fill-color:var(--text-muted); }
+
+  .results-title { font-size:32px; font-weight:800; margin-bottom:8px; }
+  .results-sub { font-size:15px; color:var(--text-muted); margin-bottom:40px; line-height:1.6; }
+
+  .stats-row {
+    display:flex; gap:16px; justify-content:center; margin-bottom:40px; flex-wrap:wrap;
+  }
+  .stat-box {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:16px; padding:20px 24px;
+    min-width:120px; text-align:center;
+  }
+  .stat-num { font-size:28px; font-weight:800; font-family:'Space Mono',monospace; }
+  .stat-label { font-size:12px; color:var(--text-muted); text-transform:uppercase; letter-spacing:1px; margin-top:4px; }
+
+  /* Topics breakdown */
+  .breakdown-title { font-size:16px; font-weight:700; margin-bottom:16px; text-align:left; }
+  .topic-bars { display:flex; flex-direction:column; gap:10px; margin-bottom:36px; }
+  .topic-bar-row { display:flex; align-items:center; gap:12px; }
+  .topic-bar-label { font-size:13px; color:var(--text-muted); width:140px; text-align:right; flex-shrink:0; }
+  .topic-bar-track { flex:1; height:8px; background:var(--surface2); border-radius:20px; overflow:hidden; }
+  .topic-bar-fill { height:100%; border-radius:20px; transition:width 1s ease 0.5s; }
+  .topic-bar-pct { font-size:12px; font-family:'Space Mono',monospace; width:40px; color:var(--text); }
+
+  /* Comparison */
+  .comparison-box {
+    background:var(--surface2); border:1px solid var(--border);
+    border-radius:16px; padding:20px 24px;
+    margin-bottom:32px; text-align:left;
+    font-size:14px; line-height:1.8;
+  }
+  .comparison-box .comp-title { font-weight:700; margin-bottom:8px; font-size:15px; }
+  .up { color:var(--correct); font-weight:700; }
+  .down { color:var(--wrong); font-weight:700; }
+  .neutral { color:var(--text-muted); font-weight:700; }
+
+  .results-btns { display:flex; gap:12px; flex-wrap:wrap; justify-content:center; }
+  .btn-secondary {
+    background:var(--surface2); border:1px solid var(--border);
+    color:var(--text); border-radius:14px;
+    padding:14px 28px; font-size:15px; font-weight:600;
+    cursor:pointer; font-family:'Outfit',sans-serif;
+    transition:all 0.25s;
+  }
+  .btn-secondary:hover { border-color:var(--accent); color:var(--accent); }
+
+  .btn-primary {
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    border:none; color:#fff; border-radius:14px;
+    padding:14px 28px; font-size:15px; font-weight:700;
+    cursor:pointer; font-family:'Outfit',sans-serif;
+    transition:all 0.25s;
+  }
+  .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(108,99,255,0.4); }
+
+  /* Particles */
+  .particle {
+    position:fixed; pointer-events:none; z-index:999;
+    border-radius:50%; animation:particleFly 1s ease forwards;
+  }
+  @keyframes particleFly {
+    0%{opacity:1;transform:translate(0,0) scale(1)}
+    100%{opacity:0;transform:translate(var(--dx),var(--dy)) scale(0)}
+  }
+
+  /* Responsive */
+  @media(max-width:600px) {
+    .quiz-topbar { padding:12px 16px; }
+    .quiz-main { padding:30px 16px; }
+    .question-card { padding:24px 20px; }
+    .question-text { font-size:17px; }
+    .results-card { padding:36px 24px; }
+  }
+
+  .global-logo { display: none; }
+</style>
+</head>
+<body>
+<div class="wrapper">
+<div class="global-logo">Frosted</div>
+
+<!-- ===== WELCOME SCREEN ===== -->
+<div id="welcome" class="screen active">
+  <div class="logo-badge"><span class="dot"></span>CS Quiz Master</div>
+  <h1 class="main-title">Test Your<br>Knowledge</h1>
+  <p class="subtitle">Master Python, OOP, File Handling, and Machine Learning — all in one place.</p>
+
+  <div class="chapter-grid">
+    <div class="chapter-card" data-ch="1" onclick="selectChapter(this)">
+      <div class="card-icon">🐍</div>
+      <div class="card-title">Chapter 1 — Python Basics</div>
+      <div class="card-desc">Variables, strings, loops, lists, dicts, functions & more</div>
+      <div class="card-count">78 questions</div>
+    </div>
+    <div class="chapter-card" data-ch="2" onclick="selectChapter(this)">
+      <div class="card-icon">🏗️</div>
+      <div class="card-title">Sheet 2 — OOP & Files</div>
+      <div class="card-desc">Classes, inheritance, file handling, pickle, CSV</div>
+      <div class="card-count">64 questions</div>
+    </div>
+    <div class="chapter-card" data-ch="3" onclick="selectChapter(this)">
+      <div class="card-icon">🤖</div>
+      <div class="card-title">Sheet 3 — Machine Learning</div>
+      <div class="card-desc">Supervised, unsupervised, reinforcement learning & more</div>
+      <div class="card-count">7 questions</div>
+    </div>
+    <div class="chapter-card" data-ch="all" onclick="selectChapter(this)">
+      <div class="card-icon">🚀</div>
+      <div class="card-title">All Chapters</div>
+      <div class="card-desc">Full mixed exam across all topics</div>
+      <div class="card-count">149 questions</div>
+    </div>
+  </div>
+
+  <button class="start-btn" onclick="startQuiz()">
+    Start Quiz <span class="arrow">→</span>
+  </button>
+
+  <div class="best-score-display" id="bestScoreWelcome">No previous scores yet — be the first!</div>
+</div>
+
+<!-- ===== QUIZ SCREEN ===== -->
+<div id="quiz" class="screen">
+  <div class="quiz-topbar">
+    <button class="quit-btn" onclick="quitQuiz()">✕ Quit</button>
+    <div class="quiz-info">
+      <span id="qProgress">Question 1 of 10</span>
+    </div>
+    <div class="score-live">
+      <span>✓ <span class="s-correct" id="liveCorrect">0</span></span>
+      <span>✗ <span class="s-wrong" id="liveWrong">0</span></span>
+    </div>
+    <div class="frosted-logo">Frosted</div>
+  </div>
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+  </div>
+
+  <div class="quiz-main">
+    <div class="q-header">
+      <span class="q-number" id="qNum">01/10</span>
+      <span class="q-topic-badge" id="qTopicBadge">Python Basics</span>
+    </div>
+
+    <div class="question-card" id="questionCard">
+      <div class="question-text" id="questionText"></div>
+    </div>
+
+    <div class="result-badge" id="resultBadge"></div>
+    <div class="options" id="optionsContainer"></div>
+    <div class="hint-box" id="hintBox">
+      <div class="hint-icon">💡</div>
+      <div>
+        <div class="hint-title">Hint</div>
+        <div class="hint-text" id="hintText"></div>
+      </div>
+    </div>
+
+    <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next Question →</button>
+  </div>
+</div>
+
+<!-- ===== RESULTS SCREEN ===== -->
+<div id="results" class="screen">
+  <div class="results-card">
+    <div class="score-ring">
+      <svg width="160" height="160" viewBox="0 0 160 160">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#6c63ff"/>
+            <stop offset="100%" style="stop-color:#ff6b9d"/>
+          </linearGradient>
+        </defs>
+        <circle class="ring-bg" cx="80" cy="80" r="65"/>
+        <circle class="ring-fill" id="ringFill" cx="80" cy="80" r="65"/>
+      </svg>
+      <div class="score-pct"><span id="scorePct">0%</span><span>score</span></div>
+    </div>
+
+    <div class="results-title" id="resultsTitle">Quiz Complete!</div>
+    <div class="results-sub" id="resultsSub"></div>
+
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num s-correct" id="resCorrect">0</div>
+        <div class="stat-label">Correct</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num s-wrong" id="resWrong">0</div>
+        <div class="stat-label">Wrong</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="resTotal">0</div>
+        <div class="stat-label">Total</div>
+      </div>
+    </div>
+
+    <div class="breakdown-title">📊 Performance by Topic</div>
+    <div class="topic-bars" id="topicBars"></div>
+
+    <div class="comparison-box" id="comparisonBox"></div>
+
+    <div class="results-btns">
+      <button class="btn-secondary" onclick="goHome()">🏠 Home</button>
+      <button class="btn-primary" onclick="restartQuiz()">🔄 Try Again</button>
+    </div>
+  </div>
+</div>
+
+</div><!-- /wrapper -->
+
+<script>
+// ============================================================
+// QUESTION BANK
+// ============================================================
+const QUESTIONS = [
+  // ======== CHAPTER 1 ========
+  {ch:1, topic:"Python Intro", q:"Why has Python become the language of choice for AI and machine learning?", opts:["It is the fastest programming language","It requires no programming knowledge","It combines simplicity with a rich AI ecosystem and widespread industry adoption","It can only be used for AI applications"], ans:2, hint:"Think about what makes Python approachable AND powerful for data science — it's a combination of ease-of-use and a vast library ecosystem."},
+  {ch:1, topic:"Python Intro", q:"What does it mean that Python supports 'dynamic typing'?", opts:["Variables must be declared with their type before use","Types cannot change once assigned","Types can change at run-time","Python only supports one data type"], ans:2, hint:"In dynamic typing, Python figures out the type of a variable at runtime, not at declaration time."},
+  {ch:1, topic:"Python Intro", q:"Which of the following is NOT a characteristic of Python?", opts:["Multi-paradigm support","Automatic memory management","Requires semicolons at the end of each statement","Extendable core language"], ans:2, hint:"Python uses newlines and indentation to end statements — no semicolons needed!"},
+  {ch:1, topic:"Python Syntax", q:"What is the correct way to write a single-line comment in Python?", opts:["// This is a comment","/* This is a comment*/","# This is a comment","' This is a comment"], ans:2, hint:"The symbol used for comments in Python is borrowed from shell scripting."},
+  {ch:1, topic:"Python Syntax", q:"Which statement about Python syntax is TRUE?", opts:["Python is case-insensitive","The end of a command must be marked with a semicolon","Python is particular about whitespace and indentation","Indentation is optional for readability"], ans:2, hint:"Indentation in Python is not just style — it defines code blocks!"},
+  {ch:1, topic:"Python Syntax", q:"How would you write a multi-line comment in Python?", opts:['/* This is a multi-line comment*/',"<!-- This is a multi-line comment>--",'"""This is a multi-line comment"""',"# This is a multi-line comment#"], ans:2, hint:"Multi-line strings (triple quotes) can serve as multi-line comments in Python."},
+  {ch:1, topic:"Python Syntax", q:"According to Python conventions, how many spaces should be used for indentation within a block?", opts:["2 spaces","4 spaces","8 spaces","2 tabs"], ans:1, hint:"PEP 8 — Python's style guide — recommends a specific consistent number of spaces."},
+  {ch:1, topic:"Python Basics", q:"What will be the output of the following code?\n\nval = 5\nval = \"Hello\"\nprint(val)", opts:["5","Hello","Error: cannot change type","5Hello"], ans:1, hint:"Python is dynamically typed — variables can be reassigned to any type."},
+  {ch:1, topic:"Python Basics", q:"Which of the following is a valid variable name in Python?", opts:["2ndPlace","my-variable","my_variable","my variable"], ans:2, hint:"Variable names can't start with a digit, use hyphens, or contain spaces."},
+  {ch:1, topic:"Python Basics", q:"What is a reserved word in Python?", opts:["A word that must be used for variable names","A word with special meaning in the language that cannot be used as a variable name","A word that is reserved for comments","A word that automatically creates a variable"], ans:1, hint:"Keywords like `if`, `for`, `while`, `class` are reserved — they have built-in meaning."},
+  {ch:1, topic:"Python Basics", q:"Which of the following is NOT a valid Boolean value in Python?", opts:["True","False","true"], ans:2, hint:"Python is case-sensitive — boolean values must be capitalized exactly."},
+  {ch:1, topic:"Python Basics", q:"What is the result of 9 % 4 in Python?", opts:["2.25","2","1","36"], ans:2, hint:"The % operator gives the remainder of division, not the quotient."},
+  {ch:1, topic:"Python Basics", q:"According to operator precedence in Python, which operation is performed first?", opts:["Addition and subtraction","Multiplication and division","Exponents","Expressions in parentheses"], ans:3, hint:"Remember PEMDAS / BODMAS — parentheses always come first."},
+  {ch:1, topic:"Python Basics", q:"What is the result of 5 ** 2 in Python?", opts:["7","10","25","52"], ans:2, hint:"The ** operator is Python's exponentiation operator — it means 'to the power of'."},
+  {ch:1, topic:"Python Basics", q:"What will the expression 2 * 3 + 5 evaluate to?", opts:["16","11","13","10"], ans:1, hint:"Multiplication has higher precedence than addition — do * before +."},
+  {ch:1, topic:"Strings", q:"How would you correctly create a string that contains a single quote in Python?", opts:["storeName = 'Joe's Store'","storeName = \"Joe's Store\"","storeName = 'Joe\\'s Store'","Both B and C are correct"], ans:3, hint:"You can either use double quotes to wrap the string, or escape the single quote with a backslash."},
+  {ch:1, topic:"Strings", q:"Given `str = \"Hello\"`, what does `str[-1]` return?", opts:["H","e","l","o"], ans:3, hint:"Negative indexing in Python counts from the end. -1 is the last character."},
+  {ch:1, topic:"Strings", q:"Which string method would you use to convert a string to all uppercase letters?", opts:["uppercase()","toUpper()","upper()","capitalize()"], ans:2, hint:"Python's string method for uppercase is concise — just `.upper()`."},
+  {ch:1, topic:"Strings", q:"What is the result of len(\"\") in Python?", opts:["null","0","1","Error"], ans:1, hint:"An empty string has a length of zero — no characters, no length."},
+  {ch:1, topic:"Strings", q:"What does the `\\n` escape sequence represent?", opts:["Tab","Backslash","New line","Single quote"], ans:2, hint:"\\n stands for 'newline' — it moves the cursor to the next line."},
+  {ch:1, topic:"Strings", q:"What is the output of `\"Hello\" + \"World\"`?", opts:["Hello World","HelloWorld","Hello+World","Error"], ans:1, hint:"The + operator concatenates strings — no space is added unless you include one."},
+  {ch:1, topic:"Strings", q:"Given `st = \"Fantastic\"`, what does `st[0:6]` return?", opts:["Fantas","Fantast","Fantastic","F"], ans:0, hint:"Slicing [start:end] includes the start index but excludes the end index. Count carefully!"},
+  {ch:1, topic:"Strings", q:"What will `\"Hello World\".split()` return?", opts:["['Hello', 'World']","['Hello World']","'Hello', 'World'","Hello World"], ans:0, hint:"`.split()` without arguments splits on whitespace and returns a list of words."},
+  {ch:1, topic:"Strings", q:"How do you convert the number 99 to a string in Python?", opts:["string(99)","toStr(99)","str(99)","toString(99)"], ans:2, hint:"Python's built-in function for type conversion to string is `str()`."},
+  {ch:1, topic:"Strings", q:"What is the output of `print(\"Hi {}, your age is {}\".format(\"Amy\", 21))`?", opts:["Hi {}, your age is {} Amy 21","Hi Amy, your age is 21","Hi 21, your age is Amy","Error"], ans:1, hint:"`.format()` replaces `{}` placeholders with arguments in order."},
+  {ch:1, topic:"Strings", q:"Given `st = \"Python\"`, what does `st[1:4]` return?", opts:["Pyt","yth","ytho","Pyth"], ans:1, hint:"Slicing starts at index 1 (y) and goes up to but not including index 4 (h)."},
+  {ch:1, topic:"Python Basics", q:"Which module must be imported to work with dates and times in Python?", opts:["time","calendar","datetime","date"], ans:2, hint:"The module name matches what you're working with — dates AND times together."},
+  {ch:1, topic:"Python Basics", q:"What is the correct way to read keyboard input in Python?", opts:["read()","input()","keyboard()","scan()"], ans:1, hint:"Python's built-in function for reading user input is straightforward."},
+  {ch:1, topic:"Python Basics", q:"The Python `time()` function returns:", opts:["The current date","The current time in seconds","The current time formatted as a string","The system uptime"], ans:1, hint:"time() returns a float representing seconds since the Unix epoch (Jan 1, 1970)."},
+  {ch:1, topic:"Python Basics", q:"Which operator is used to check equality in Python?", opts:["=","==","eq","!="], ans:1, hint:"A single = is assignment; double == is comparison."},
+  {ch:1, topic:"Python Basics", q:"What is the result of `5 > 5` in Python?", opts:["True","False","0","Error"], ans:1, hint:"5 is not strictly greater than 5 — they are equal."},
+  {ch:1, topic:"Python Basics", q:"According to evaluation order for logical operators, which is evaluated first?", opts:["and","or","not","They are evaluated left to right"], ans:2, hint:"Logical operator precedence: not > and > or (same idea as multiplication vs addition)."},
+  {ch:1, topic:"Python Basics", q:"What is the result of `True and False`?", opts:["True","False","Maybe","Error"], ans:1, hint:"With `and`, BOTH sides must be True for the result to be True."},
+  {ch:1, topic:"Python Basics", q:"What is the output of the following code?\n\nn = 5\nv = 8\nprint(n == v or n+4 > v)", opts:["True","False","5","Error"], ans:0, hint:"Evaluate each side: (5==8) is False. (5+4 > 8) is (9>8) which is True. False OR True = True."},
+  {ch:1, topic:"Control Flow", q:"What is the correct syntax for an if statement in Python?", opts:["if condition then:","if condition:","if (condition)","if condition then"], ans:1, hint:"Python uses a colon after the condition — no 'then' keyword needed."},
+  {ch:1, topic:"Control Flow", q:"What is crucial about indentation in Python decision structures?", opts:["It's optional for readability","It's how Python knows which statements are part of the block","Only one space is required","Tabs and spaces can be mixed freely"], ans:1, hint:"Unlike C or Java with curly braces, Python uses indentation to define code blocks."},
+  {ch:1, topic:"Control Flow", q:"What will the following code print if n = 2?\n\nif n == 1:\n    print(\"one\")\nelif n == 2:\n    print(\"two\")\nelif n == 3:\n    print(\"three\")\nelse:\n    print(\"Too big!\")\nprint(\"Done!\")", opts:["two","two Done!","Too big! Done!","two\nDone!"], ans:3, hint:"The elif matches n==2, so 'two' prints. Then 'Done!' always runs because it's outside the if block."},
+  {ch:1, topic:"Control Flow", q:"The colon (:) in an if statement indicates:", opts:["The end of the line","The start of a block of statements","A comment","String concatenation"], ans:1, hint:"The colon marks the beginning of an indented block."},
+  {ch:1, topic:"Loops", q:"What is an iteration?", opts:["The condition that controls a loop","Each time a loop is executed","The code inside a loop","The variable that counts loop executions"], ans:1, hint:"Each pass through a loop is one iteration."},
+  {ch:1, topic:"Loops", q:"What is the main difference between a for loop and a while loop?", opts:["For loops are faster","While loops always run at least once","For loops are typically used when you know the number of iterations in advance","There is no difference"], ans:2, hint:"For loops iterate over a sequence or range; while loops repeat while a condition is true."},
+  {ch:1, topic:"Loops", q:"What will this code do?\n\nn = 1\nwhile n <= 5:\n    print(n)", opts:["Print numbers 1 to 5","Print 1 indefinitely (infinite loop)","Print nothing","Cause a syntax error"], ans:1, hint:"The loop condition is n <= 5, but n never changes inside the loop — n stays 1 forever."},
+  {ch:1, topic:"Loops", q:"What does `range(1,6)` produce in Python?", opts:["[1,2,3,4,5,6]","[1,2,3,4,5]","[0,1,2,3,4,5]","[1,6]"], ans:1, hint:"range(start, stop) includes start but excludes stop. So range(1,6) = 1,2,3,4,5."},
+  {ch:1, topic:"Loops", q:"How can you fix `for i in range(0,10): print(i)` to print 0 to 10?", opts:["Change range(0,10) to range(0,11)","Change range(0,10) to range(0,10,1)","Add i += 1 inside the loop","Change range(0,10) to range(1,10)"], ans:0, hint:"To include 10, the stop value must be 11 since range excludes the stop value."},
+  {ch:1, topic:"Loops", q:"What is an off-by-one error?", opts:["When you use the wrong comparison operator","When you forget to update the loop variable","When you stop the loop one iteration too early or too late","When you use the wrong loop type"], ans:2, hint:"Off-by-one means your loop runs one too many or one too few times."},
+  {ch:1, topic:"Lists", q:"What is the index of the first element in a Python list?", opts:["1","0","-1","First"], ans:1, hint:"Python (like most languages) is zero-indexed — the first element is at position 0."},
+  {ch:1, topic:"Lists", q:"Given `data = [100, 200, 300, 'one', 'two', 600]`, what does `data[4]` return?", opts:["300","'one'","'two'","600"], ans:2, hint:"Count from 0: data[0]=100, [1]=200, [2]=300, [3]='one', [4]='two'."},
+  {ch:1, topic:"Lists", q:"Which method adds an item to the end of a list?", opts:["list.add()","list.append()","list.insert()","list.push()"], ans:1, hint:"The `append()` method adds one element to the end of a list."},
+  {ch:1, topic:"Lists", q:"What happens if you try to access data[6] on a list with 6 elements?", opts:["Return None","Return the last element","Return an index error","Return an empty value"], ans:2, hint:"Valid indices for a 6-element list are 0–5. Accessing index 6 goes out of bounds."},
+  {ch:1, topic:"Lists", q:"Which method removes a specific value from a list?", opts:["list.delete()","list.remove()","list.pop()","list.del()"], ans:1, hint:"`.remove(value)` finds and removes the first occurrence of a specific value."},
+  {ch:1, topic:"Lists", q:"Given `data = list(range(1,11))`, what does `data[1:8:2]` return?", opts:["[1,3,5,7]","[2,4,6,8]","[1,2,3,4,5,6,7,8]","[2,4,6]"], ans:1, hint:"data = [1..10]. Slice [1:8:2] starts at index 1 (value 2), steps by 2: indices 1,3,5,7 → values 2,4,6,8."},
+  {ch:1, topic:"Tuples & Sets", q:"What is a key characteristic of a tuple?", opts:["It is mutable","It is unchangeable (immutable)","It cannot contain duplicate values","It is unordered"], ans:1, hint:"Tuples are like lists but they cannot be changed after creation."},
+  {ch:1, topic:"Tuples & Sets", q:"How are tuples written in Python?", opts:["With square brackets []","With curly brackets {}","With round brackets ()","With angle brackets <>"], ans:2, hint:"Tuples use parentheses, lists use square brackets, dicts/sets use curly brackets."},
+  {ch:1, topic:"Tuples & Sets", q:"What is true about sets in Python?", opts:["Sets are ordered and indexed","Sets cannot have two items with the same value","Sets are written with round brackets"], ans:1, hint:"The defining property of a set is uniqueness — no duplicate values are allowed."},
+  {ch:1, topic:"Dictionaries", q:"How do you access a value in a dictionary?", opts:["By its index position","By its key","By its value","By calling dict.get()"], ans:1, hint:"Unlike lists (which use integer indices), dictionaries use keys to retrieve values."},
+  {ch:1, topic:"Dictionaries", q:"What does `dict.keys()` return?", opts:["All values in the dictionary","All keys in the dictionary","The number of keys in the dictionary","The first key in the dictionary"], ans:1, hint:"`.keys()` returns a view of all the dictionary's keys."},
+  {ch:1, topic:"Dictionaries", q:"Which statement correctly adds a new key-value pair to a dictionary?", opts:["dict.add(4, 'four')","dict[4] = 'four'","dict.append(4:'four')","dict.insert(4, 'four')"], ans:1, hint:"You assign to a dictionary using bracket notation with the key."},
+  {ch:1, topic:"Functions", q:"What are parameters in a function?", opts:["The output values of a function","The inputs to a function","The name of the function","The documentation of a function"], ans:1, hint:"Parameters are the variables listed in the function definition that receive input values."},
+  {ch:1, topic:"Functions", q:"What will `print(max(3, 5, 2))` output?", opts:["2","3","5","(3,5,2)"], ans:2, hint:"max() returns the largest value among all arguments."},
+  {ch:1, topic:"Functions", q:"Which module would you import to use the `randint()` function?", opts:["math","random","time","sys"], ans:1, hint:"Random number generation lives in the `random` module."},
+  {ch:1, topic:"Functions", q:"What is a lambda function?", opts:["A function that requires multiple lines","A function that does not have a name","A function that returns multiple values","A built-in Python function"], ans:1, hint:"Lambda functions are anonymous — they're small, one-line functions without a def statement."},
+  {ch:1, topic:"Modules", q:"What does `from somefile import *` do?", opts:["Imports only the className from somefile","Imports everything from somefile into the current namespace","Creates a new file called somefile","Imports the file but requires prefix for all items"], ans:1, hint:"The `*` wildcard means 'import everything'. No module prefix is needed."},
+  {ch:1, topic:"Modules", q:"After using `import somefile`, how do you call a function `myFunction` from that module?", opts:["myFunction()","somefile.myFunction()","import.myFunction()","module.myFunction()"], ans:1, hint:"When importing a whole module, you access its contents using dot notation: module.function()."},
+
+  // Code questions Ch1
+  {ch:1, topic:"Python Basics", q:"What will be the output of the following code?\n\nx = 10\ny = 3\nresult = x / y * 2\nprint(result)", opts:["6.0","6.666666666666667","3.3333333333333335","20.0"], ans:1, hint:"/ is true division in Python 3. 10/3 = 3.333..., then * 2 = 6.666..."},
+  {ch:1, topic:"Control Flow", q:"What is the output?\n\nnum = 7\nif num % 2 == 0:\n    print(\"Even\")\nelif num % 3 == 0:\n    print(\"Divisible by 3\")\nelse:\n    print(\"Odd\")", opts:["Even","Divisible by 3","Odd","Nothing"], ans:2, hint:"7 % 2 = 1 (not 0), 7 % 3 = 1 (not 0). So neither condition is true — the else runs."},
+  {ch:1, topic:"Loops", q:"What will this code display?\n\ncount = 0\nwhile count < 3:\n    print(count, end=\" \")\n    count += 1\nprint(\"Done\")", opts:["0 1 2 Done","0 1 2 3 Done","1 2 3 Done","0 1 2"], ans:0, hint:"count starts at 0, loops while < 3 (prints 0,1,2), then exits and prints Done."},
+  {ch:1, topic:"Lists", q:"What is the result?\n\nlist1 = [1, 2, 3]\nlist2 = list1\nlist2.append(4)\nprint(list1)", opts:["[1, 2, 3]","[1, 2, 3, 4]","[4]","Error"], ans:1, hint:"list2 = list1 does NOT copy the list — both variables point to the SAME list object."},
+  {ch:1, topic:"Functions", q:"What does this code output?\n\ndef mystery(a, b):\n    return a * b + a\nprint(mystery(3, 4))", opts:["12","15","7","16"], ans:1, hint:"3 * 4 = 12, then + 3 = 15."},
+  {ch:1, topic:"Loops", q:"What will be the output?\n\nfor i in range(3):\n    for j in range(2):\n        print(i, j)", opts:["0 0, 0 1, 1 0, 1 1, 2 0, 2 1","0 0, 1 1, 2 2","0 1, 1 2, 2 3","0 0, 0 1, 1 0, 1 1"], ans:0, hint:"Outer loop: i = 0,1,2. For each i, inner loop runs j = 0,1. That's 6 pairs total."},
+
+  // Fill in blank / error detection
+  {ch:1, topic:"Python Basics", q:"What is the average calculation?\n\na = 10\nb = 20\nc = 30\naverage = ___\nprint(average)", opts:["(a + b + c) / 3","a + b + c / 3","(a + b + c) // 3","None of the above"], ans:0, hint:"Without parentheses, only c/3 would be computed first due to precedence. // is integer division."},
+  {ch:1, topic:"Control Flow", q:"Which line correctly checks if a number is between 10 and 20 (inclusive)?\n\nnum = 15\nif ___:\n    print(\"In range\")", opts:["num >= 10 and num <= 20","10 <= num <= 20","num in range(10, 21)","All of the above"], ans:3, hint:"All three expressions are valid Python and correctly check if num is in [10, 20]!"},
+  {ch:1, topic:"Lists", q:"Complete the code to create a list of even numbers from 0 to 20:\n\nevens = ___", opts:["[n for n in range(21) if n%2 == 0]","[n for n in range(0,21,2)]","Both A and B work","Neither works"], ans:2, hint:"Both list comprehensions produce the same result: [0,2,4,6,8,10,12,14,16,18,20]."},
+
+  // Error detection
+  {ch:1, topic:"Python Syntax", q:"What is wrong with this code?\n\nfor i in range(5)\n    print(i)", opts:["Missing colon after range(5)","print should be Print","range(5) should be range(0,5)","Nothing is wrong"], ans:0, hint:"Python for loops require a colon (:) at the end of the for statement."},
+  {ch:1, topic:"Python Basics", q:"Identify the error:\n\nage = input(\"Enter age: \")\nif age >= 18:\n    print(\"Adult\")", opts:["input() returns a string, cannot compare with integer","Missing colon after if statement","print should be capitalized","No error"], ans:0, hint:"input() always returns a string. You need int(age) or int(input(...)) to compare with 18."},
+  {ch:1, topic:"Functions", q:"Find the error:\n\ndef calculate_sum(numbers):\n    total = 0\n    for num in numbers\n        total += num\n    return total", opts:["Missing colon after for loop","numbers should be in quotes","total is not initialized","No error"], ans:0, hint:"The for statement is missing a colon at the end: `for num in numbers:`"},
+  {ch:1, topic:"Control Flow", q:"What's wrong with this code?\n\nx = 10\nif x = 10:\n    print(\"x is 10\")", opts:["Should use == for comparison, not =","Missing parentheses","x should be in quotes","No error"], ans:0, hint:"= is assignment, == is comparison. In an if condition, you must use ==."},
+  {ch:1, topic:"Strings", q:"What's wrong with this string manipulation?\n\ntext = \"Hello\"\ntext[0] = \"J\"\nprint(text)", opts:["Strings are immutable, cannot assign to index","Should use replace() method","Index should be 1","No error"], ans:0, hint:"Strings in Python are immutable — you cannot change individual characters by index."},
+  {ch:1, topic:"Dictionaries", q:"What's wrong with this dictionary access?\n\nstudent = {\"name\": \"Alice\", \"age\": 20}\nprint(student[\"grade\"])", opts:["Key 'grade' doesn't exist","Should use student.grade","Dictionary should use = not :","No error"], ans:0, hint:"There is no 'grade' key in the dictionary. Accessing a non-existent key raises a KeyError."},
+  {ch:1, topic:"Loops", q:"Identify the error in this while loop:\n\ncount = 5\nwhile count > 0:\n    print(count)\n    count += 1", opts:["Infinite loop (count increases, never reaches <= 0)","Should use for loop instead","count should start at 0","No error"], ans:0, hint:"count starts at 5 and keeps increasing (+= 1), so count > 0 is always True → infinite loop!"},
+
+  // ======== CHAPTER 2 ========
+  {ch:2, topic:"OOP — Classes", q:"What is true about classes in Python?", opts:["Classes must be defined with an interface file","Everything in Python is really an object","Classes cannot have methods","Python requires the 'new' keyword for instantiation"], ans:1, hint:"Python is a pure object-oriented language — numbers, strings, functions are all objects."},
+  {ch:2, topic:"OOP — Classes", q:"What is the purpose of the `self` parameter in Python class methods?", opts:["It refers to the class itself","It refers to the current instance of the class","It's a keyword that must be used to call methods","It's optional and can be omitted"], ans:1, hint:"self is how an instance refers to itself — similar to 'this' in Java or C++."},
+  {ch:2, topic:"OOP — Classes", q:"Which method serves as the constructor in a Python class?", opts:["__construct__","__new__","__init__","__main__"], ans:2, hint:"__init__ is called automatically when a new object is created."},
+  {ch:2, topic:"OOP — Classes", q:"How do you create a new instance of a class named `Student`?", opts:["x = new Student()","x = Student.new()","x = Student()","x = create Student()"], ans:2, hint:"Python doesn't use the 'new' keyword — you just call the class like a function."},
+  {ch:2, topic:"OOP — Classes", q:"In the method definition `def get_age(self):`, why is `self` included?", opts:["It must be explicitly passed when calling the method","It gets bound to the calling instance automatically","It's a Python keyword","It's optional for static methods only"], ans:1, hint:"Python automatically binds the instance to `self` when you call an instance method."},
+  {ch:2, topic:"OOP — Classes", q:"What happens when you call `b = student(\"Bob\", 21)`?", opts:["The __new__ method receives 'Bob' and 21","The __init__ method receives 'Bob' and 21","The class constructor receives 'Bob' and 21","Both B and C"], ans:3, hint:"__init__ IS the constructor in Python — calling the class invokes __init__."},
+  {ch:2, topic:"OOP — Classes", q:"What is a data attribute in Python?", opts:["An attribute owned by the class as a whole","A variable owned by a particular instance of a class","A method that returns data","A built-in function for data manipulation"], ans:1, hint:"Data attributes (instance variables) are defined with self.x = ... and belong to each object."},
+  {ch:2, topic:"OOP — Classes", q:"What is a class attribute?", opts:["An attribute that each instance has its own copy of","An attribute owned by the class as a whole, shared by all instances","An attribute that can only be accessed within methods","An attribute that must be defined in every class"], ans:1, hint:"Class attributes are defined directly in the class body (not in __init__) and shared by all instances."},
+  {ch:2, topic:"OOP — Classes", q:"How do you access a class attribute safely from within an instance method?", opts:["self.class.attribute","class.attribute","self.__class__.attribute","self.class.attribute"], ans:2, hint:"self.__class__ gives you a reference to the class, then .attribute accesses the class attribute."},
+  {ch:2, topic:"OOP — Classes", q:"In this code:\n\nclass counter:\n    overall_total = 0\n    def __init__(self):\n        self.my_total = 0\n\nWhat are `overall_total` and `my_total` respectively?", opts:["Both are class attributes","Both are data attributes","overall_total is a class attribute, my_total is a data attribute","overall_total is a data attribute, my_total is a class attribute"], ans:2, hint:"overall_total is in the class body (class attribute); my_total uses self (data/instance attribute)."},
+  {ch:2, topic:"OOP — Inheritance", q:"How do you define a subclass in Python?", opts:["class Cs_student extends student:","class Cs_student(student):","class Cs_student : student","class Cs_student inherits student:"], ans:1, hint:"Python uses parentheses to specify the parent class."},
+  {ch:2, topic:"OOP — Inheritance", q:"To call a parent class method from a subclass, you:", opts:["Use the `super` keyword automatically","Explicitly call parentClass.methodName(self, args)","Use self.parent.method()","Cannot call parent methods once overridden"], ans:1, hint:"You can call a parent's method using ClassName.method(self, args) explicitly."},
+  {ch:2, topic:"OOP — Inheritance", q:"When is the only time you explicitly pass `self` as an argument?", opts:["When creating a new instance","When calling a method of an ancestor class","When defining a new method","When accessing data attributes"], ans:1, hint:"When you call a parent class method directly like Parent.method(self), you pass self explicitly."},
+  {ch:2, topic:"OOP — Classes", q:"What does the `__repr__` method do?", opts:["Repeats a string multiple times","Represents the object as a string for display","Replaces attributes in the object","Returns the number of attributes"], ans:1, hint:"__repr__ defines the string representation of an object — useful for debugging."},
+  {ch:2, topic:"OOP — Classes", q:"How do you make a method private in Python?", opts:["Use the `private` keyword","Start the method name with two underscores (e.g., __method)","Start the method name with one underscore","Use the `protected` keyword"], ans:1, hint:"Double underscore prefix triggers name mangling, making it hard to access from outside the class."},
+  {ch:2, topic:"OOP — Classes", q:"Which naming convention is used for Python's built-in methods and attributes?", opts:["Single underscore prefix: _method","Double underscore both ends: __method__","Double underscore prefix only: __method","Capital letters: Method"], ans:1, hint:"Dunder methods (double underscore on both sides) are Python's built-in special methods."},
+  {ch:2, topic:"File Handling", q:"What are the three essential steps in file handling?", opts:["Create, read, delete","Open, perform operations, close","Write, save, exit","Initialize, process, terminate"], ans:1, hint:"File handling always follows: open → do something → close."},
+  {ch:2, topic:"File Handling", q:"Why is it important to close a file?", opts:["To delete the file from disk","To release system resources","To make the file read-only","To compress the file"], ans:1, hint:"Open files hold system resources. Closing them releases those resources and ensures data is saved."},
+  {ch:2, topic:"File Handling", q:"What are the two types of files in Python?", opts:[".txt and .doc files","Text files and binary files","Readable and writable files","ASCII and Unicode files"], ans:1, hint:"Files in Python are either text (human-readable characters) or binary (raw bytes)."},
+  {ch:2, topic:"File Handling", q:"What is an absolute path?", opts:["The path relative to current working directory","The full path starting from the root directory","The path without any directory names","The path to temporary files"], ans:1, hint:"Absolute paths start from the root (/ on Linux/Mac, C:\\ on Windows) — not relative to where you are."},
+  {ch:2, topic:"File Handling", q:"What does `os.getcwd()` do?", opts:["Changes the current working directory","Creates a new directory","Displays the current working directory","Deletes the current directory"], ans:2, hint:"getcwd = get current working directory. It tells you where you currently are in the filesystem."},
+  {ch:2, topic:"File Handling", q:"What does the 'r' mode do when opening a file?", opts:["Opens file for writing only","Opens file for reading only, file pointer at beginning","Opens file for appending","Opens file for reading and writing"], ans:1, hint:"'r' is read-only mode — the default if you don't specify a mode."},
+  {ch:2, topic:"File Handling", q:"Which mode opens a file for writing only, creates it if it doesn't exist, and overwrites if it does?", opts:["'r'","'a'","'w'","'r+'"], ans:2, hint:"'w' = write mode. Danger: it overwrites existing content!"},
+  {ch:2, topic:"File Handling", q:"What does 'a+' mode do?", opts:["Opens file for reading only","Opens file for both appending and reading","Opens file for writing only","Opens file for binary writing"], ans:1, hint:"'a' = append (write at end), '+' = also allows reading."},
+  {ch:2, topic:"File Handling", q:"Which mode should you use to work with binary files?", opts:["Include 'b' in the mode (e.g., 'rb', 'wb')","Include 'bin' in the mode","Use special binary functions only","Binary files use the same modes as text files"], ans:0, hint:"Adding 'b' to any mode (rb, wb, ab) switches to binary mode."},
+  {ch:2, topic:"File Handling", q:"What does `file.closed` return?", opts:["The file name","The file mode","True if the file is closed, False if open","The file encoding"], ans:2, hint:"file.closed is a boolean property that tells you if the file is currently closed."},
+  {ch:2, topic:"File Handling", q:"Which attribute returns the encoding used for byte-to-string conversion?", opts:["file.mode","file.name","file.encoding","file.newlines"], ans:2, hint:"file.encoding tells you the character encoding (like 'utf-8') being used."},
+  {ch:2, topic:"File Handling", q:"What does `read()` return when called without arguments?", opts:["The first line of the file","The entire file as a string","A list of all lines","The file size in bytes"], ans:1, hint:"read() with no argument reads the entire file content as one string."},
+  {ch:2, topic:"File Handling", q:"What does `readlines()` return?", opts:["A string containing all lines","A list where each element is a line from the file","The first line of the file","The number of lines in the file"], ans:1, hint:"readlines() returns a list — each element is one line (including the \\n character)."},
+  {ch:2, topic:"File Handling", q:"Which method is most memory-efficient for reading a large file line by line?", opts:["read()","readlines()","Using a for loop directly on the file object","readline() in a while loop"], ans:2, hint:"Iterating directly over the file object is the most Pythonic and memory-efficient approach."},
+  {ch:2, topic:"File Handling", q:"When using `write()`, when does the data actually get saved to the file?", opts:["Immediately after write() is called","When flush() or close() is called","When the program starts","When the file is opened"], ans:1, hint:"Data is buffered in memory until flush() or close() forces it to be written to disk."},
+  {ch:2, topic:"File Handling", q:"What happens if you open a file in 'w' mode and it already exists?", opts:["An error is raised","The file is appended","The file is overwritten","The file is renamed"], ans:2, hint:"'w' mode is destructive — it truncates (clears) the file before writing."},
+  {ch:2, topic:"File Handling", q:"What does `tell()` method do?", opts:["Changes the file position","Returns the current position within the file in bytes","Tells you if the file is readable","Returns the file size"], ans:1, hint:"tell() returns an integer representing the current read/write position in the file."},
+  {ch:2, topic:"Serialization", q:"Which module is used for serialization/deserialization in Python?", opts:["serial","json","pickle","marshal"], ans:2, hint:"pickle is Python's module for serializing (pickling) and deserializing (unpickling) objects."},
+  {ch:2, topic:"Serialization", q:"Which method writes a pickled object to a file?", opts:["pickle.save()","pickle.write()","pickle.dump()","pickle.store()"], ans:2, hint:"pickle.dump() dumps the object into the file. pickle.load() loads it back."},
+  {ch:2, topic:"Serialization", q:"Why use pickle instead of manually encoding data?", opts:["It's faster","It automatically handles complex objects and variable lengths","It creates smaller files","It's the only way to write binary files"], ans:1, hint:"Pickle handles complex Python objects (lists, dicts, custom classes) automatically without manual encoding."},
+  {ch:2, topic:"CSV", q:"What does CSV stand for?", opts:["Comma Separated Variables","Comma Separated Values","Character Separated Values","Column Separated Values"], ans:1, hint:"CSV = Comma-Separated Values — a simple text format for tabular data."},
+  {ch:2, topic:"CSV", q:"In CSV format, how are fields with embedded commas handled?", opts:["They are not allowed","They are enclosed in double quotes","They use a different separator","They are split into multiple fields"], ans:1, hint:"Double quotes protect commas inside field values from being treated as delimiters."},
+  {ch:2, topic:"CSV", q:"Which module is used for CSV file handling in Python?", opts:["csv","excel","spreadsheet","table"], ans:0, hint:"Python's built-in `csv` module handles CSV reading and writing."},
+  {ch:2, topic:"CSV", q:"What does `csv.reader()` return?", opts:["A dictionary of all data","An iterator that returns each row as a list","A string containing all data","A list of all column names"], ans:1, hint:"csv.reader() returns an iterator — each iteration gives you one row as a list of strings."},
+
+  // OOP Code questions
+  {ch:2, topic:"OOP — Classes", q:"What will be the output?\n\nclass student:\n    def __init__(self, n):\n        self.name = n\ns = student(\"Alice\")\nprint(s.name)", opts:["Error: missing self","Alice","None","student object"], ans:1, hint:"self.name is set to 'Alice' in __init__, so s.name returns 'Alice'."},
+  {ch:2, topic:"OOP — Classes", q:"In the following code, what is `x`?\n\nclass Sample:\n    x = 10\n    def __init__(self):\n        self.y = 20", opts:["Both are data attributes","x is a class attribute, y is a data attribute","x is a data attribute, y is a class attribute","Both are class attributes"], ans:1, hint:"x is defined in the class body → class attribute. y uses self → data/instance attribute."},
+  {ch:2, topic:"File Handling", q:"What will this code print?\n\nwith open(\"test.txt\", \"w\") as f:\n    f.write(\"Hello\\nWorld\")\nf = open(\"test.txt\", \"r\")\nprint(f.read(5))\nf.close()", opts:["Hello","Hello\\nWorld","Hello","Hell"], ans:0, hint:"read(5) reads the first 5 characters: H-e-l-l-o. The \\n comes after."},
+  {ch:2, topic:"Serialization", q:"What does this code do?\n\nimport pickle\ndata = [1, 2, 3, 4]\nwith open(\"data.pkl\", \"wb\") as f:\n    pickle.dump(data, f)", opts:["Writes the list as text to a file","Serializes the list and writes it as binary","Creates a CSV file","Raises an error"], ans:1, hint:"pickle.dump() serializes the Python list and writes it in binary format to 'data.pkl'."},
+  {ch:2, topic:"File Handling", q:"What will be the output?\n\nf = open(\"sample.txt\", \"w\")\nf.write(\"Line1\\nLine2\\nLine3\")\nf.close()\nf = open(\"sample.txt\", \"r\")\nlines = f.readlines()\nprint(len(lines))\nf.close()", opts:["1","3","2","Error"], ans:1, hint:"readlines() splits on \\n. The file has 3 lines: 'Line1\\n', 'Line2\\n', 'Line3'."},
+
+  // True/False as MCQ
+  {ch:2, topic:"OOP — Classes", q:"True or False: Python has a 'new' keyword for creating objects.", opts:["True","False"], ans:1, hint:"Python doesn't use 'new'. You just call the class: obj = MyClass()."},
+  {ch:2, topic:"OOP — Classes", q:"True or False: The `self` parameter must be included when calling a method.", opts:["True","False"], ans:1, hint:"When you CALL a method, Python binds self automatically. You include it in the DEFINITION, not the call."},
+  {ch:2, topic:"OOP — Inheritance", q:"True or False: Python supports multiple inheritance.", opts:["True","False"], ans:0, hint:"Python allows a class to inherit from multiple parent classes: class Child(Parent1, Parent2)."},
+  {ch:2, topic:"OOP — Classes", q:"True or False: In Python, you must explicitly free memory when done with objects.", opts:["True","False"], ans:1, hint:"Python has automatic garbage collection — it frees memory automatically when objects are no longer referenced."},
+  {ch:2, topic:"File Handling", q:"True or False: Text files store data as bytes while binary files store as characters.", opts:["True","False"], ans:1, hint:"It's the opposite! Text files store characters; binary files store raw bytes."},
+  {ch:2, topic:"File Handling", q:"True or False: The `os.remove()` method is used to delete a directory.", opts:["True","False"], ans:1, hint:"os.remove() deletes FILES. Use os.rmdir() or shutil.rmtree() to delete directories."},
+
+  // Fill in blank Ch2
+  {ch:2, topic:"OOP — Classes", q:"The __________ method is called automatically when an object is created.", opts:["__create__","__init__","__new__","__main__"], ans:1, hint:"__init__ is Python's constructor — it initializes the object's attributes."},
+  {ch:2, topic:"OOP — Classes", q:"To prevent a method from being accessed outside the class, use __________ at the beginning of its name.", opts:["single underscore","double underscore","triple underscore","no underscore"], ans:1, hint:"Double underscore prefix triggers name mangling, making the method effectively private."},
+  {ch:2, topic:"OOP — Classes", q:"The __________ method defines how an object is represented as a string.", opts:["__str__ or __repr__","__string__","__format__","__display__"], ans:0, hint:"Both __str__ (for print) and __repr__ (for developers/debugging) define string representations."},
+  {ch:2, topic:"File Handling", q:"To read a file line by line efficiently, use a __________ loop on the file object.", opts:["while","for","do-while","repeat"], ans:1, hint:"A for loop on a file object iterates line by line efficiently without loading everything into memory."},
+  {ch:2, topic:"File Handling", q:"The __________ method returns the current file position in bytes.", opts:["position()","tell()","seek()","locate()"], ans:1, hint:"tell() returns position, seek() changes position."},
+
+  // Code error detection Ch2
+  {ch:2, topic:"OOP — Inheritance", q:"Which code correctly demonstrates inheritance?", opts:["class Child(Parent):","class Child extends Parent:","class Child inherits Parent:","class Child : Parent"], ans:0, hint:"Python uses parentheses to specify the parent class in the class definition."},
+  {ch:2, topic:"OOP — Inheritance", q:"To call the parent class's __init__ from a child class, you would write:", opts:["super().__init__(args)","Parent.__init__(self, args)","Both A and B work","self.Parent.__init__(args)"], ans:2, hint:"Both approaches work: super().__init__() is more modern, Parent.__init__(self) is the explicit way."},
+  {ch:2, topic:"OOP — Classes", q:"What is the output?\n\nclass Test:\n    count = 0\n    def __init__(self):\n        Test.count += 1\na = Test()\nb = Test()\nc = Test()\nprint(Test.count)", opts:["0","1","3","Error"], ans:2, hint:"count is a class attribute. Each time __init__ runs, it increments Test.count. 3 objects → count = 3."},
+  {ch:2, topic:"File Handling", q:"Which file mode would you use to add data to the end of an existing text file without overwriting?", opts:["'w'","'r'","'a'","'x'"], ans:2, hint:"'a' = append mode. It adds to the end without touching existing content."},
+  {ch:2, topic:"File Handling", q:"What does this code do?\n\nwith open(\"data.txt\", \"r\") as f:\n    data = f.read()", opts:["Opens the file and automatically closes it after the block","Keeps the file open indefinitely","Raises an error if file doesn't exist","Both A and C"], ans:3, hint:"The 'with' statement auto-closes the file. If 'data.txt' doesn't exist in 'r' mode, FileNotFoundError is raised."},
+  {ch:2, topic:"OOP — Classes", q:"What's wrong with this code?\n\nclass Student:\n    def __init__(self, name):\n        name = name", opts:["Missing self parameter","Should use self.name = name to create an attribute","__init__ cannot take parameters","Nothing is wrong"], ans:1, hint:"Without self.name, you're just assigning to a local variable. The attribute won't be stored on the object."},
+  {ch:2, topic:"File Handling", q:"What error will occur?\n\nf = open(\"nonexistent.txt\", \"r\")\ncontent = f.read()", opts:["No error, file is created","FileNotFoundError","PermissionError","TypeError"], ans:1, hint:"Opening a non-existent file in read mode ('r') raises FileNotFoundError."},
+  {ch:2, topic:"File Handling", q:"What's the problem with this file handling code?\n\nf = open(\"data.txt\", \"w\")\nf.write(\"Hello\")\n# Program ends without closing file", opts:["Data might not be saved","File will be corrupted","Python will crash","Nothing, Python auto-closes at program end"], ans:0, hint:"Without close() or flush(), buffered data might not be written to disk. Use 'with' statement to avoid this."},
+
+  // ======== SHEET 3 — ML ========
+  {ch:3, topic:"Machine Learning", q:"Which of the following is NOT one of the three main categories of machine learning?", opts:["Supervised Learning","Unsupervised Learning","Reinforcement Learning","Associative Learning"], ans:3, hint:"The three main ML categories are Supervised, Unsupervised, and Reinforcement Learning."},
+  {ch:3, topic:"Machine Learning", q:"In supervised learning, the training data contains the desired solutions, which are also called...", opts:["Clusters","Grades","Labels or Targets","Features"], ans:2, hint:"Supervised learning uses labeled data — the 'correct answers' are called labels or targets."},
+  {ch:3, topic:"Machine Learning", q:"Predicting whether an email is 'spam' or 'not spam' is a ______ task, while predicting the exact price of a house is a ______ task.", opts:["Regression; Classification","Clustering; Regression","Classification; Regression","Reinforcement; Classification"], ans:2, hint:"Predicting a category = Classification. Predicting a continuous number = Regression."},
+  {ch:3, topic:"Machine Learning", q:"An algorithm that identifies natural groupings of customers based on their purchasing patterns is performing...", opts:["Classification","Regression","Dimensionality Reduction","Clustering"], ans:3, hint:"Finding natural groups in unlabeled data is called Clustering — a type of unsupervised learning."},
+  {ch:3, topic:"Machine Learning", q:"The main challenge with K-Means is selecting the appropriate number of clusters (K). A common technique to help with this is...", opts:["The Silhouette Score","The Elbow Method","The Adjusted Rand Score","The Confusion Matrix"], ans:1, hint:"The Elbow Method plots inertia vs K — you look for the 'elbow' point where adding more clusters gives diminishing returns."},
+  {ch:3, topic:"Machine Learning", q:"What is the key difference in data provided for reinforcement learning compared to supervised learning?", opts:["Reinforcement learning uses unlabeled data.","Reinforcement learning provides a grade or measure of how good an output was, rather than the correct output.","Reinforcement learning requires a target array.","Reinforcement learning uses a features matrix."], ans:1, hint:"RL gets a reward/penalty signal (how good was the action?) not the 'correct' action like supervised learning."},
+  {ch:3, topic:"Machine Learning", q:"A model that performs exceptionally well on training data but poorly on new, unseen data is suffering from...", opts:["Underfitting","High Bias","Overfitting","Low Variance"], ans:2, hint:"Great on training, poor on new data = Overfitting. The model memorized the training data instead of learning general patterns."},
+];
+
+// ============================================================
+// STATE
+// ============================================================
+let selectedChapter = null;
+let currentQuestions = [];
+let currentIndex = 0;
+let score = { correct: 0, wrong: 0 };
+let topicStats = {};
+let answered = false;
+let lastChapter = null;
+
+const STORAGE_KEY = 'cs_quiz_scores_v2';
+
+function getScores() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+function saveScore(ch, pct, topicData) {
+  const scores = getScores();
+  if (!scores[ch]) scores[ch] = { best: 0, history: [], topicHistory: [] };
+  scores[ch].history.push(pct);
+  scores[ch].topicHistory.push(topicData);
+  if (pct > scores[ch].best) scores[ch].best = pct;
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(scores));
+}
+
+// ============================================================
+// WELCOME
+// ============================================================
+function updateBestScoreDisplay() {
+  const scores = getScores();
+  const el = document.getElementById('bestScoreWelcome');
+  let parts = [];
+  const labels = {1:'Ch1 Python', 2:'Sheet2 OOP', 3:'Sheet3 ML', all:'All Chapters'};
+  for (const [k,v] of Object.entries(scores)) {
+    parts.push(`${labels[k]}: <strong>${v.best}%</strong>`);
+  }
+  el.innerHTML = parts.length ? '🏆 Best Scores: ' + parts.join(' · ') : 'No previous scores yet — be the first!';
+}
+updateBestScoreDisplay();
+
+function selectChapter(el) {
+  document.querySelectorAll('.chapter-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedChapter = el.dataset.ch;
+}
+
+function startQuiz() {
+  if (!selectedChapter) { selectChapter(document.querySelector('.chapter-card[data-ch="all"]')); selectedChapter='all'; }
+  lastChapter = selectedChapter;
+
+  if (selectedChapter === 'all') {
+    currentQuestions = shuffle([...QUESTIONS]);
+  } else {
+    currentQuestions = shuffle(QUESTIONS.filter(q => q.ch == selectedChapter));
+  }
+
+  currentIndex = 0;
+  score = { correct: 0, wrong: 0 };
+  topicStats = {};
+  answered = false;
+
+  showScreen('quiz');
+  renderQuestion();
+}
+
+// ============================================================
+// QUIZ
+// ============================================================
+function renderQuestion() {
+  const q = currentQuestions[currentIndex];
+  const total = currentQuestions.length;
+
+  // Progress
+  document.getElementById('qProgress').textContent = `Question ${currentIndex+1} of ${total}`;
+  document.getElementById('qNum').textContent = String(currentIndex+1).padStart(2,'0') + '/' + total;
+  document.getElementById('progressFill').style.width = ((currentIndex+1)/total*100) + '%';
+  document.getElementById('liveCorrect').textContent = score.correct;
+  document.getElementById('liveWrong').textContent = score.wrong;
+
+  // Topic badge
+  const badge = document.getElementById('qTopicBadge');
+  badge.textContent = q.topic;
+  const colors = {
+    "Python Intro":"#6c63ff","Python Syntax":"#7c6fff","Python Basics":"#8b63ff",
+    "Strings":"#a855f7","Control Flow":"#ec4899","Loops":"#f59e0b",
+    "Lists":"#10b981","Tuples & Sets":"#06b6d4","Dictionaries":"#6366f1",
+    "Functions":"#f97316","Modules":"#84cc16",
+    "OOP — Classes":"#ff6b9d","OOP — Inheritance":"#ff4d8f",
+    "File Handling":"#00d4aa","Serialization":"#00bfa5","CSV":"#26c6a0",
+    "Machine Learning":"#6c63ff"
+  };
+  badge.style.background = hexToRGBA(colors[q.topic]||'#6c63ff', 0.15);
+  badge.style.color = colors[q.topic]||'#6c63ff';
+  badge.style.border = `1px solid ${hexToRGBA(colors[q.topic]||'#6c63ff', 0.3)}`;
+
+  // Question
+  const qText = document.getElementById('questionText');
+  qText.innerHTML = formatQuestion(q.q);
+
+  // Restart card animation
+  const card = document.getElementById('questionCard');
+  card.style.animation = 'none';
+  requestAnimationFrame(() => { card.style.animation = ''; });
+
+  // Options
+  const container = document.getElementById('optionsContainer');
+  container.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  q.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option-btn';
+    btn.innerHTML = `<span class="option-letter">${letters[i]}</span><span class="option-text">${formatOption(opt)}</span>`;
+    btn.onclick = () => selectAnswer(i, q);
+    container.appendChild(btn);
+  });
+
+  // Reset state
+  document.getElementById('hintBox').classList.remove('show');
+  document.getElementById('resultBadge').className = 'result-badge';
+  document.getElementById('nextBtn').classList.remove('show');
+  answered = false;
+}
+
+function formatQuestion(text) {
+  const lines = text.split('\n');
+
+  // Find where the code block starts (first line that looks like code, after line 0)
+  const codeStartPatterns = /^\s*(class |def |if |elif |else:|for |while |print|import |from |return |#|[a-zA-Z_][\w]*\s*[=\(])/;
+  let codeStart = -1;
+  for (let i = 1; i < lines.length; i++) {
+    if (lines[i].trim() !== '' && codeStartPatterns.test(lines[i])) {
+      codeStart = i;
+      break;
+    }
+  }
+
+  if (codeStart === -1) {
+    // No code — just plain text
+    return escHtml(text).replace(/\n/g, '<br>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+
+  // Split into intro text + code block
+  const introLines = lines.slice(0, codeStart).filter(l => l.trim() !== '');
+  const codeLines = lines.slice(codeStart);
+
+  // Remove trailing empty lines from code
+  while (codeLines.length && codeLines[codeLines.length - 1].trim() === '') codeLines.pop();
+
+  const introHtml = introLines.map(l => escHtml(l)).join('<br>').replace(/`([^`]+)`/g, '<code>$1</code>');
+  const codeHtml = `<pre class="code-block">${escHtml(codeLines.join('\n'))}</pre>`;
+
+  return introHtml + (introHtml ? '' : '') + codeHtml;
+}
+
+function formatOption(text) {
+  return escHtml(text).replace(/`([^`]+)`/g, '<code>$1</code>');
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function selectAnswer(chosen, q) {
+  if (answered) return;
+  answered = true;
+
+  const btns = document.querySelectorAll('.option-btn');
+  const isCorrect = chosen === q.ans;
+
+  if (isCorrect) {
+    score.correct++;
+    btns[chosen].classList.add('correct');
+    showParticles(btns[chosen]);
+  } else {
+    score.wrong++;
+    btns[chosen].classList.add('wrong');
+    btns[q.ans].classList.add('correct');
+  }
+
+  btns.forEach(b => b.disabled = true);
+
+  // Track topic stats
+  if (!topicStats[q.topic]) topicStats[q.topic] = {correct:0, total:0};
+  topicStats[q.topic].total++;
+  if (isCorrect) topicStats[q.topic].correct++;
+
+  // Result badge
+  const badge = document.getElementById('resultBadge');
+  if (isCorrect) {
+    badge.className = 'result-badge correct';
+    badge.innerHTML = '✓ Correct!';
+  } else {
+    badge.className = 'result-badge wrong';
+    badge.innerHTML = '✗ Incorrect';
+  }
+
+  // Hint
+  const hintBox = document.getElementById('hintBox');
+  document.getElementById('hintText').textContent = q.hint;
+  hintBox.classList.add('show');
+
+  // Live score update
+  document.getElementById('liveCorrect').textContent = score.correct;
+  document.getElementById('liveWrong').textContent = score.wrong;
+
+  // Next button
+  document.getElementById('nextBtn').classList.add('show');
+  document.getElementById('nextBtn').textContent = currentIndex < currentQuestions.length - 1 ? 'Next Question →' : 'See Results 🏁';
+}
+
+function nextQuestion() {
+  currentIndex++;
+  if (currentIndex >= currentQuestions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+    window.scrollTo({top:0, behavior:'smooth'});
+  }
+}
+
+// ============================================================
+// RESULTS
+// ============================================================
+function showResults() {
+  showScreen('results');
+  const total = currentQuestions.length;
+  const pct = Math.round(score.correct / total * 100);
+
+  // Save score
+  const topicData = {};
+  for (const [t, s] of Object.entries(topicStats)) topicData[t] = Math.round(s.correct/s.total*100);
+  saveScore(lastChapter, pct, topicData);
+
+  // Ring animation
+  const circ = 2 * Math.PI * 65;
+  const fill = document.getElementById('ringFill');
+  fill.style.strokeDashoffset = circ;
+  setTimeout(() => { fill.style.strokeDashoffset = circ - (circ * pct / 100); }, 100);
+
+  document.getElementById('scorePct').innerHTML = pct + '%<span>score</span>';
+
+  // Title
+  let title, sub;
+  if (pct >= 90) { title = '🌟 Outstanding!'; sub = `You got ${score.correct} out of ${total} questions right. Exceptional work!`; }
+  else if (pct >= 75) { title = '🎉 Great Job!'; sub = `${score.correct}/${total} correct. You're well on your way to mastery!`; }
+  else if (pct >= 60) { title = '👍 Good Effort!'; sub = `${score.correct}/${total} correct. Keep practicing the topics below.`; }
+  else if (pct >= 40) { title = '📚 Keep Going!'; sub = `${score.correct}/${total} correct. Review the highlighted topics below.`; }
+  else { title = '💪 Don\'t Give Up!'; sub = `${score.correct}/${total} correct. Focus on the weak areas and try again!`; }
+
+  document.getElementById('resultsTitle').textContent = title;
+  document.getElementById('resultsSub').textContent = sub;
+  document.getElementById('resCorrect').textContent = score.correct;
+  document.getElementById('resWrong').textContent = score.wrong;
+  document.getElementById('resTotal').textContent = total;
+
+  // Topic breakdown
+  const barsEl = document.getElementById('topicBars');
+  barsEl.innerHTML = '';
+  const sorted = Object.entries(topicStats).sort((a,b) => (a[1].correct/a[1].total) - (b[1].correct/b[1].total));
+  sorted.forEach(([topic, s]) => {
+    const p = Math.round(s.correct/s.total*100);
+    const color = p >= 75 ? '#00d4aa' : p >= 50 ? '#ffc86b' : '#ff4d6d';
+    const row = document.createElement('div');
+    row.className = 'topic-bar-row';
+    row.innerHTML = `
+      <div class="topic-bar-label">${topic}</div>
+      <div class="topic-bar-track"><div class="topic-bar-fill" style="width:0%;background:${color}" data-pct="${p}"></div></div>
+      <div class="topic-bar-pct">${p}%</div>`;
+    barsEl.appendChild(row);
+  });
+  setTimeout(() => {
+    document.querySelectorAll('.topic-bar-fill').forEach(el => {
+      el.style.width = el.dataset.pct + '%';
+    });
+  }, 200);
+
+  // Comparison with previous
+  const scores = getScores();
+  const history = scores[lastChapter]?.history || [];
+  const compEl = document.getElementById('comparisonBox');
+  if (history.length >= 2) {
+    const prev = history[history.length-2];
+    const diff = pct - prev;
+    const best = scores[lastChapter].best;
+    let compHTML = `<div class="comp-title">📈 Compared to Previous Attempt</div>`;
+    compHTML += `Previous score: <strong>${prev}%</strong> → This time: <strong>${pct}%</strong> `;
+    if (diff > 0) compHTML += `<span class="up">+${diff}% improvement! 🔥</span>`;
+    else if (diff < 0) compHTML += `<span class="down">${diff}% lower</span>`;
+    else compHTML += `<span class="neutral">Same score</span>`;
+    compHTML += `<br>Best ever: <strong style="color:var(--accent3)">${best}%</strong>`;
+
+    // Weak topics suggestion
+    const weakTopics = sorted.filter(([t,s]) => s.correct/s.total < 0.6).map(([t]) => t);
+    if (weakTopics.length) {
+      compHTML += `<br><br>💡 <strong>Focus on:</strong> ${weakTopics.slice(0,3).join(', ')}`;
+    }
+    compEl.innerHTML = compHTML;
+  } else {
+    compEl.innerHTML = `<div class="comp-title">🎯 First attempt recorded!</div>Scored <strong>${pct}%</strong>. Try again to track your improvement.`;
+  }
+}
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function goHome() {
+  updateBestScoreDisplay();
+  showScreen('welcome');
+}
+
+function restartQuiz() {
+  startQuiz();
+}
+
+function quitQuiz() {
+  if (confirm('Quit the quiz? Progress will be lost.')) goHome();
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function shuffle(arr) {
+  for (let i = arr.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]] = [arr[j],arr[i]];
+  }
+  return arr;
+}
+
+function hexToRGBA(hex, alpha) {
+  const r = parseInt(hex.slice(1,3),16);
+  const g = parseInt(hex.slice(3,5),16);
+  const b = parseInt(hex.slice(5,7),16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function showParticles(el) {
+  const rect = el.getBoundingClientRect();
+  const cx = rect.left + rect.width/2;
+  const cy = rect.top + rect.height/2;
+  const colors = ['#6c63ff','#ff6b9d','#00d4aa','#ffc86b','#fff'];
+  for (let i = 0; i < 12; i++) {
+    const p = document.createElement('div');
+    p.className = 'particle';
+    const size = 6 + Math.random()*8;
+    const angle = Math.random()*360;
+    const dist = 60 + Math.random()*80;
+    const dx = Math.cos(angle*Math.PI/180)*dist + 'px';
+    const dy = (Math.sin(angle*Math.PI/180)*dist - 40) + 'px';
+    Object.assign(p.style, {
+      width: size+'px', height: size+'px',
+      left: (cx - size/2) + 'px', top: (cy - size/2 + window.scrollY) + 'px',
+      background: colors[Math.floor(Math.random()*colors.length)],
+      '--dx': dx, '--dy': dy,
+      animationDuration: (0.6 + Math.random()*0.4) + 's'
+    });
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 1000);
+  }
+}
+</script>
+</body>
+</html>
